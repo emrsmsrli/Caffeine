@@ -1,118 +1,150 @@
 package tr.edu.iyte.caffeine;
 
+import android.content.ComponentName;
 import android.os.AsyncTask;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.util.Log;
 
+import java.util.Locale;
+
+/*
+    Long clicking on your quick settings tile will,
+    by default, go to your app’s ‘App Info’ screen.
+    You can override that behavior by adding an <intent-filter>
+    to one of your activities with ACTION_QS_TILE_PREFERENCES.
+
+    -----------------------------------------------------------------
+
+    In active mode, your TileService will still be bound for onTileAdded()
+    and onTileRemoved() (and for click events). However, the only time
+    you’ll get a callback to onStartListening() is after you call the static
+    TileService.requestListeningState() method. You’ll then be able to update
+    your tile exactly once before receiving a callback to onStopListening().
+    This gives you an easy one-shot ability to update your tile right when
+    your data changes whether the tile is visible or not.
+ */
+
+/**
+ * todo javadoc
+ */
 public class CaffeineService extends TileService {
 
     private static class Clock {
         private int min;
         private int sec;
 
-        private void set(int min, int sec) {
+        private void set(int min) {
             this.min = min;
-            this.sec = sec;
+            this.sec = 0;
         }
 
-        private int getMin() {
+        private boolean decrement() {
+            if(sec == 0) {
+                sec = 60;
+                min--;
+            }
+            sec--;
+
+            return min == 0 && sec == 0;
+        }
+        
+        @Override
+        public String toString() {
+            if(sec < 10)
+                return String.format(Locale.getDefault(), "%d:0%d", min, sec);
+            return String.format(Locale.getDefault(), "%d:%d", min, sec);
+        }
+    }
+
+    private enum Mode {
+        INACTIVE("Caffeine", 0),
+        FIVE_MINS("5:00", 5),
+        TEN_MINS("10:00", 10),
+        INFINITE_MINS("\u221E", 0);
+
+        private String label;
+        private int min;
+
+        Mode(String label, int min) {
+            this.label = label;
+            this.min = min;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public int getMin() {
             return min;
-        }
-
-        private int getSec() {
-            return sec;
         }
     }
 
     private static final String TAG = "CaffeineService";
     private static final Clock CLOCK = new Clock();
 
-    private enum Mode {
-        INACTIVE("Caffeine"),
-        FIVE_MINS("5:00"),
-        TEN_MINS("10:00"),
-        INFINITE_MINS("\u221E");
-
-        private String label;
-
-        Mode(String label) {
-            this.label = label;
-        }
-
-        public String getLabel() {
-            return label;
-        }
-    }
-
     private boolean isListening = false;
     private Mode mode = Mode.INACTIVE;
-
-    /**
-     * TODO
-     * - implement finite state machine 0 - 5 - 10 - infinite minutes
-     * - implement countdown timer with async task, publishProgress(Clock c)
-     */
-
     private AsyncTask<Clock, Clock, Void> timerTask = null;
 
     @Override
     public void onTileAdded() {
-        super.onTileAdded();
-        Tile t = getQsTile();
-        t.setState(Tile.STATE_INACTIVE);
-        t.setLabel(mode.getLabel());
-        t.updateTile();
+        Log.d(TAG, "Tile added");
     }
 
     @Override
     public void onTileRemoved() {
-        super.onTileRemoved();
+        Log.d(TAG, "Tile removed");
         resetClock();
     }
 
     @Override
     public void onStartListening() {
-        super.onStartListening();
+        Log.d(TAG, "Started listening");
         isListening = true;
     }
 
     @Override
     public void onStopListening() {
-        super.onStopListening();
+        Log.d(TAG, "Stopped listening");
         isListening = false;
     }
 
     @Override
     public void onClick() {
-        super.onClick();
-        Tile t = getQsTile();
+        Log.d(TAG, "Tile clicked, last mode: " + mode.toString());
 
         switch(mode) {
             case INACTIVE:
                 mode = Mode.FIVE_MINS;
-                t.setState(Tile.STATE_ACTIVE);
-                t.setLabel(mode.getLabel());
+                createTask();
                 break;
             case FIVE_MINS:
                 mode = Mode.TEN_MINS;
-                t.setLabel(mode.getLabel());
+                createTask();
                 break;
             case TEN_MINS:
                 mode = Mode.INFINITE_MINS;
+                resetClock();
+                Tile t = getQsTile();
                 t.setLabel(mode.getLabel());
+                t.updateTile();
                 break;
             case INFINITE_MINS:
-                mode = Mode.INACTIVE;
-                t.setState(Tile.STATE_INACTIVE);
-                t.setLabel(mode.getLabel());
+                resetTile();
                 resetClock();
                 break;
             default:
                 break;
         }
 
-        t.updateTile();
+        Log.d(TAG, "Mode changed: " + mode.getLabel());
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        resetClock();
     }
 
     private void createTask() {
@@ -120,7 +152,19 @@ public class CaffeineService extends TileService {
             @Override
             protected void onPreExecute() {
                 super.onPreExecute();
-                //todo init tile
+                resetClock();
+                Tile t = getQsTile();
+                CLOCK.set(mode.getMin());
+                t.setState(Tile.STATE_ACTIVE);
+                t.setLabel(mode.getLabel());
+                t.updateTile();
+                //todo acquire wakelock
+            }
+
+            private void waitAndUpdate(Clock clock) throws InterruptedException {
+                Thread.sleep(1000);
+                if(isListening)
+                    publishProgress(clock);
             }
 
             @Override
@@ -128,7 +172,14 @@ public class CaffeineService extends TileService {
                 Clock clock = c[0];
 
                 try {
-                    Thread.sleep(1000);
+                    if(mode == Mode.INFINITE_MINS) {
+                        while(!Thread.interrupted()) // FIXME: 05/05/2017 is this true?
+                            Thread.sleep(30000);
+                    } else {
+                        waitAndUpdate(clock);
+                        while(clock.decrement())
+                            waitAndUpdate(clock);
+                    }
                 } catch(InterruptedException e) {
                     Log.e(TAG, "doInBackground: Caffeine mode changed");
                 }
@@ -137,21 +188,40 @@ public class CaffeineService extends TileService {
             }
 
             @Override
-            protected void onProgressUpdate(Clock... values) {
-                super.onProgressUpdate(values);
-                Clock clock = values[0];
+            protected void onProgressUpdate(Clock... c) {
+                super.onProgressUpdate(c);
+                Tile tile = getQsTile();
+                tile.setLabel(c[0].toString());
+                tile.updateTile();
+            }
 
-                //todo update tile
+            @Override
+            protected void onCancelled(Void aVoid) {
+                resetClock();
+                //todo release wakelock
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                super.onPostExecute(aVoid);
+                resetTile();
+                resetClock();
+                //todo release wakelock
             }
         }.execute(CLOCK);
-    }
-
-    private void setClock(int min, int sec) {
-        CLOCK.set(min, sec);
     }
 
     private void resetClock() {
         if(timerTask != null && timerTask.getStatus() != AsyncTask.Status.FINISHED)
             timerTask.cancel(true);
+        timerTask = null;
+    }
+    
+    private void resetTile() {
+        mode = Mode.INACTIVE;
+        Tile tile = getQsTile();
+        tile.setState(Tile.STATE_INACTIVE);
+        tile.setLabel(mode.getLabel());
+        tile.updateTile();
     }
 }
