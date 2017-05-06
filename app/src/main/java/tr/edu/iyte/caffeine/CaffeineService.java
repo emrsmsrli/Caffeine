@@ -1,6 +1,5 @@
 package tr.edu.iyte.caffeine;
 
-import android.content.ComponentName;
 import android.os.AsyncTask;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
@@ -39,13 +38,15 @@ public class CaffeineService extends TileService {
             this.sec = 0;
         }
 
-        private boolean decrement() {
+        private void decrement() {
             if(sec == 0) {
                 sec = 60;
-                min--;
+                --min;
             }
-            sec--;
+            --sec;
+        }
 
+        private boolean isFinished() {
             return min == 0 && sec == 0;
         }
         
@@ -173,12 +174,11 @@ public class CaffeineService extends TileService {
                         while(!Thread.interrupted()) // FIXME: 05/05/2017 is this true?
                             Thread.sleep(30000);
                     } else {
-                        waitAndUpdate(clock);
-                        while(!clock.decrement())
+                        while(!clock.isFinished())
                             waitAndUpdate(clock);
                     }
                 } catch(InterruptedException e) {
-                    Log.e(TAG, "doInBackground: Caffeine mode changed", e);
+                    Log.i(TAG, "Caffeine mode changed " + e.getCause());
                 }
 
                 return null;
@@ -189,7 +189,7 @@ public class CaffeineService extends TileService {
                 super.onProgressUpdate(c);
                 Tile tile = getQsTile();
                 tile.setLabel(c[0].toString());
-                Log.d(TAG, "onProgressUpdate: Tile label: " + c[0].toString());
+                Log.d(TAG, "Updating tile label: " + c[0].toString());
                 tile.updateTile();
             }
 
@@ -209,6 +209,7 @@ public class CaffeineService extends TileService {
 
             private void waitAndUpdate(Clock clock) throws InterruptedException {
                 Thread.sleep(1000);
+                clock.decrement();
                 if(isListening)
                     publishProgress(clock);
             }
