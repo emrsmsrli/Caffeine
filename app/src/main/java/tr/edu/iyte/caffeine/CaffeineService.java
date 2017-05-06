@@ -83,9 +83,9 @@ public class CaffeineService extends TileService {
     private static final String TAG = "CaffeineService";
     private static final Clock CLOCK = new Clock();
 
-    private boolean isListening = false;
-    private Mode mode = Mode.INACTIVE;
-    private AsyncTask<Clock, Clock, Void> timerTask = null;
+    private static boolean isListening = false;
+    private static Mode mode = Mode.INACTIVE;
+    private static AsyncTask<Clock, Clock, Void> timerTask = null;
 
     @Override
     public void onTileAdded() {
@@ -125,10 +125,7 @@ public class CaffeineService extends TileService {
                 break;
             case TEN_MINS:
                 mode = Mode.INFINITE_MINS;
-                resetClock();
-                Tile t = getQsTile();
-                t.setLabel(mode.getLabel());
-                t.updateTile();
+                createTask();
                 break;
             case INFINITE_MINS:
                 resetTile();
@@ -161,12 +158,6 @@ public class CaffeineService extends TileService {
                 //todo acquire wakelock
             }
 
-            private void waitAndUpdate(Clock clock) throws InterruptedException {
-                Thread.sleep(1000);
-                if(isListening)
-                    publishProgress(clock);
-            }
-
             @Override
             protected Void doInBackground(Clock... c) {
                 Clock clock = c[0];
@@ -181,7 +172,7 @@ public class CaffeineService extends TileService {
                             waitAndUpdate(clock);
                     }
                 } catch(InterruptedException e) {
-                    Log.e(TAG, "doInBackground: Caffeine mode changed");
+                    Log.e(TAG, "doInBackground: Caffeine mode changed", e);
                 }
 
                 return null;
@@ -192,6 +183,7 @@ public class CaffeineService extends TileService {
                 super.onProgressUpdate(c);
                 Tile tile = getQsTile();
                 tile.setLabel(c[0].toString());
+                Log.d(TAG, "onProgressUpdate: Tile label: " + c[0].toString());
                 tile.updateTile();
             }
 
@@ -207,6 +199,12 @@ public class CaffeineService extends TileService {
                 resetTile();
                 resetClock();
                 //todo release wakelock
+            }
+
+            private void waitAndUpdate(Clock clock) throws InterruptedException {
+                Thread.sleep(1000);
+                if(isListening)
+                    publishProgress(clock);
             }
         }.execute(CLOCK);
     }
