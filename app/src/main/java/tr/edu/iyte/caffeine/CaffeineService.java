@@ -1,6 +1,11 @@
 package tr.edu.iyte.caffeine;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncTask;
+import android.os.PowerManager;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.util.Log;
@@ -27,7 +32,18 @@ import java.util.Locale;
 /**
  * todo javadoc
  */
+@SuppressWarnings("deprecation")
 public class CaffeineService extends TileService {
+
+    public class PowerBroadcastReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
+                CaffeineService.this.reset();
+            }
+        }
+    }
 
     /**
      *
@@ -113,7 +129,6 @@ public class CaffeineService extends TileService {
      *
      */
     private static final Clock CLOCK = new Clock();
-
     /**
      *
      */
@@ -127,12 +142,27 @@ public class CaffeineService extends TileService {
     /**
      *
      */
+    private static boolean isBroadcastRegistered = false;
+
+    /**
+     *
+     */
     private static Mode mode = Mode.INACTIVE;
 
     /**
      *
      */
     private static AsyncTask<Clock, Clock, Void> timer = null;
+
+    /**
+     *
+     */
+    private static PowerManager.WakeLock wakeLock = null;
+
+    /**
+     *
+     */
+    private final PowerBroadcastReceiver receiver = new PowerBroadcastReceiver();
 
     //todo remove this method
     @Override
@@ -302,17 +332,31 @@ public class CaffeineService extends TileService {
      *
      */
     private void acquireWakeLock() {
-        Log.i(TAG, "Acquiring wakelock");
+        Log.i(TAG, "Acquiring wakelock..");
         isWakeLockAcquired = true;
-        //todo acquire wakelock after true
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "CaffeineWL");
+        wakeLock.acquire();
+
+        if(!isBroadcastRegistered) {
+            registerReceiver(receiver, new IntentFilter(Intent.ACTION_SCREEN_OFF));
+            isBroadcastRegistered = true;
+        }
     }
 
     /**
      *
      */
     private void releaseWakeLock() {
-        Log.i(TAG, "Releasing wakelock");
-        //todo release wakelock before false
+        Log.i(TAG, "Releasing wakelock..");
+        if(wakeLock != null && wakeLock.isHeld())
+            wakeLock.release();
+        wakeLock = null;
         isWakeLockAcquired = false;
+
+        if(isBroadcastRegistered) {
+            unregisterReceiver(receiver);
+            isBroadcastRegistered = false;
+        }
     }
 }

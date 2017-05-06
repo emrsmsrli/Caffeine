@@ -31,7 +31,7 @@
         </activity>
 
         <receiver
-            android:name=".PowerBroadcastReceiver"
+            android:name=".CaffeineService$PowerBroadcastReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
