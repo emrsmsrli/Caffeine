@@ -29,6 +29,9 @@ import java.util.Locale;
  */
 public class CaffeineService extends TileService {
 
+    /**
+     *
+     */
     private static class Clock {
         private int min;
         private int sec;
@@ -58,6 +61,9 @@ public class CaffeineService extends TileService {
         }
     }
 
+    /**
+     *
+     */
     private enum Mode {
         INACTIVE("Caffeine", 0),
         ONE_MIN("1:00", 1),
@@ -126,7 +132,7 @@ public class CaffeineService extends TileService {
     /**
      *
      */
-    private static AsyncTask<Clock, Clock, Void> timerTask = null;
+    private static AsyncTask<Clock, Clock, Void> timer = null;
 
     //todo remove this method
     @Override
@@ -140,10 +146,15 @@ public class CaffeineService extends TileService {
         Log.d(TAG, "Tile added");
     }
 
+    /**
+     *
+     */
     @Override
     public void onTileRemoved() {
         Log.d(TAG, "Tile removed");
-        resetClock(false);
+        releaseWakeLock();
+        resetTimer();
+        mode = Mode.INACTIVE;
     }
 
     /**
@@ -169,36 +180,36 @@ public class CaffeineService extends TileService {
      */
     @Override
     public void onClick() {
-        Log.d(TAG, "Tile clicked, last mode: " + mode.toString());
-
         switch(mode) {
             case INACTIVE:
             case ONE_MIN:
             case FIVE_MINS:
             case TEN_MINS:
                 mode = mode.next();
-                createTask();
+                createTimer();
                 break;
             case INFINITE_MINS:
-                resetClock(true);
+                reset();
                 break;
             default:
                 break;
         }
-
-        Log.d(TAG, "Mode changed: " + mode.toString());
     }
 
     /**
      *
      */
-    private void createTask() {
-        timerTask = new AsyncTask<Clock, Clock, Void>() {
+    private void createTimer() {
+        resetTimer();
+        if(!isWakeLockAcquired)
+            acquireWakeLock();
+
+        timer = new AsyncTask<Clock, Clock, Void>() {
             @Override
             protected void onPreExecute() {
                 super.onPreExecute();
-                resetClock(false);
-                setTile();
+                CLOCK.set(mode.getMin());
+                updateTile(true, mode.getLabel());
             }
 
             @Override
@@ -214,7 +225,7 @@ public class CaffeineService extends TileService {
                             waitAndUpdate(clock);
                     }
                 } catch(InterruptedException e) {
-                    Log.i(TAG, "Thread interrupted, Caffeine mode changed");
+                    Log.v(TAG, "Thread interrupted, Caffeine mode changed");
                 }
 
                 return null;
@@ -223,14 +234,13 @@ public class CaffeineService extends TileService {
             @Override
             protected void onProgressUpdate(Clock... c) {
                 super.onProgressUpdate(c);
-                Tile tile = getQsTile();
-                CaffeineService.updateTileLabel(tile, c[0].toString());
+                updateTile(false, c[0].toString());
             }
 
             @Override
             protected void onPostExecute(Void aVoid) {
                 super.onPostExecute(aVoid);
-                resetClock(true);
+                reset();
             }
 
             /**
@@ -247,47 +257,62 @@ public class CaffeineService extends TileService {
         }.execute(CLOCK);
     }
 
-    private void resetClock(boolean finished) {
-        Log.i(TAG, "Resetting clock...");
-        if(timerTask != null && timerTask.getStatus() != AsyncTask.Status.FINISHED)
-            timerTask.cancel(true);
-        timerTask = null;
-
+    /**
+     *
+     */
+    private void reset() {
         releaseWakeLock();
-
-        if(finished)
-            resetTile();
+        defaultTile();
+        resetTimer();
     }
 
-    private void setTile() {
-        if(!isWakeLockAcquired)
-            acquireWakeLock();
-        Tile tile = getQsTile();
-        CLOCK.set(mode.getMin());
-        tile.setState(Tile.STATE_ACTIVE);
-        updateTileLabel(tile, mode.getLabel());
-    }
-    
-    private void resetTile() {
+    /**
+     *
+     */
+    private void defaultTile() {
         mode = Mode.INACTIVE;
+        updateTile(true, mode.getLabel());
+    }
+
+    /**
+     *
+     * @param isModeChanged
+     * @param label
+     */
+    private void updateTile(boolean isModeChanged, String label) {
+        Log.i(TAG, "Updating tile: " + label);
         Tile tile = getQsTile();
-        tile.setState(Tile.STATE_INACTIVE);
-        updateTileLabel(tile, mode.getLabel());
+        tile.setLabel(label);
+        if(isModeChanged)
+            tile.setState(mode == Mode.INACTIVE ? Tile.STATE_INACTIVE : Tile.STATE_ACTIVE);
+        tile.updateTile();
     }
 
+    /**
+     *
+     */
+    private void resetTimer() {
+        Log.v(TAG, "Resetting timer");
+        if(timer != null && timer.getStatus() != AsyncTask.Status.FINISHED)
+            timer.cancel(true);
+        timer = null;
+    }
+
+    /**
+     *
+     */
     private void acquireWakeLock() {
-        //todo acquire wakelock
+        Log.i(TAG, "Acquiring wakelock");
         isWakeLockAcquired = true;
+        //todo acquire wakelock after true
     }
 
+    /**
+     *
+     */
     private void releaseWakeLock() {
-        //todo release wakelock
+        Log.i(TAG, "Releasing wakelock");
+        //todo release wakelock before false
         isWakeLockAcquired = false;
-    }
-
-    private static void updateTileLabel(Tile t, String label) {
-        Log.d(TAG, "Updating tile label: " + label);
-        t.setLabel(label);
-        t.updateTile();
     }
 }
