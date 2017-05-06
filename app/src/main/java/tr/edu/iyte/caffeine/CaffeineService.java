@@ -35,11 +35,15 @@ import java.util.Locale;
 @SuppressWarnings("deprecation")
 public class CaffeineService extends TileService {
 
+    /**
+     *
+     */
     public class PowerBroadcastReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
             if(intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
+                Log.v(TAG, "PowerBroadcastReceiver: Received " + Intent.ACTION_SCREEN_OFF);
                 CaffeineService.this.reset();
             }
         }
@@ -120,56 +124,17 @@ public class CaffeineService extends TileService {
         }
     }
 
-    /**
-     *
-     */
     private static final String TAG = "CaffeineService";
-
-    /**
-     *
-     */
     private static final Clock CLOCK = new Clock();
-    /**
-     *
-     */
+
     private static boolean isListening = false;
-
-    /**
-     *
-     */
     private static boolean isWakeLockAcquired = false;
-
-    /**
-     *
-     */
     private static boolean isBroadcastRegistered = false;
-
-    /**
-     *
-     */
     private static Mode mode = Mode.INACTIVE;
-
-    /**
-     *
-     */
     private static AsyncTask<Clock, Clock, Void> timer = null;
-
-    /**
-     *
-     */
     private static PowerManager.WakeLock wakeLock = null;
 
-    /**
-     *
-     */
-    private final PowerBroadcastReceiver receiver = new PowerBroadcastReceiver();
-
-    //todo remove this method
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        android.os.Debug.waitForDebugger();
-    }
+    private final PowerBroadcastReceiver RECEIVER = new PowerBroadcastReceiver();
 
     @Override
     public void onTileAdded() {
@@ -338,10 +303,7 @@ public class CaffeineService extends TileService {
         wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "CaffeineWL");
         wakeLock.acquire();
 
-        if(!isBroadcastRegistered) {
-            registerReceiver(receiver, new IntentFilter(Intent.ACTION_SCREEN_OFF));
-            isBroadcastRegistered = true;
-        }
+        registerBroadcastReceiver();
     }
 
     /**
@@ -354,9 +316,28 @@ public class CaffeineService extends TileService {
         wakeLock = null;
         isWakeLockAcquired = false;
 
+        unregisterBroadcastReceiver();
+    }
+
+    /**
+     *
+     */
+    private void registerBroadcastReceiver() {
+        if(!isBroadcastRegistered) {
+            registerReceiver(RECEIVER, new IntentFilter(Intent.ACTION_SCREEN_OFF));
+            isBroadcastRegistered = true;
+            Log.i(TAG, "Receiver registered");
+        }
+    }
+
+    /**
+     *
+     */
+    private void unregisterBroadcastReceiver() {
         if(isBroadcastRegistered) {
-            unregisterReceiver(receiver);
+            unregisterReceiver(RECEIVER);
             isBroadcastRegistered = false;
+            Log.i(TAG, "Receiver unregistered");
         }
     }
 }
