@@ -88,6 +88,12 @@ public class CaffeineService extends TileService {
     private static AsyncTask<Clock, Clock, Void> timerTask = null;
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+        android.os.Debug.waitForDebugger();
+    }
+
+    @Override
     public void onTileAdded() {
         Log.d(TAG, "Tile added");
     }
@@ -140,8 +146,8 @@ public class CaffeineService extends TileService {
 
     @Override
     public void onDestroy() {
-        super.onDestroy();
         resetClock();
+        super.onDestroy();
     }
 
     private void createTask() {
@@ -168,7 +174,7 @@ public class CaffeineService extends TileService {
                             Thread.sleep(30000);
                     } else {
                         waitAndUpdate(clock);
-                        while(clock.decrement())
+                        while(!clock.decrement())
                             waitAndUpdate(clock);
                     }
                 } catch(InterruptedException e) {
