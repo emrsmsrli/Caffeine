@@ -60,6 +60,7 @@ public class CaffeineService extends TileService {
 
     private enum Mode {
         INACTIVE("Caffeine", 0),
+        ONE_MIN("1:00", 1),
         FIVE_MINS("5:00", 5),
         TEN_MINS("10:00", 10),
         INFINITE_MINS("\u221E", 0);
@@ -79,15 +80,55 @@ public class CaffeineService extends TileService {
         public int getMin() {
             return min;
         }
+
+        public Mode next() {
+            switch(this) {
+                case INACTIVE:
+                    return ONE_MIN;
+                case ONE_MIN:
+                    return FIVE_MINS;
+                case FIVE_MINS:
+                    return TEN_MINS;
+                case TEN_MINS:
+                    return INFINITE_MINS;
+                case INFINITE_MINS:
+                default:
+                    return INACTIVE;
+            }
+        }
     }
 
+    /**
+     *
+     */
     private static final String TAG = "CaffeineService";
+
+    /**
+     *
+     */
     private static final Clock CLOCK = new Clock();
 
+    /**
+     *
+     */
     private static boolean isListening = false;
+
+    /**
+     *
+     */
+    private static boolean isWakeLockAcquired = false;
+
+    /**
+     *
+     */
     private static Mode mode = Mode.INACTIVE;
+
+    /**
+     *
+     */
     private static AsyncTask<Clock, Clock, Void> timerTask = null;
 
+    //todo remove this method
     @Override
     public void onCreate() {
         super.onCreate();
@@ -102,67 +143,62 @@ public class CaffeineService extends TileService {
     @Override
     public void onTileRemoved() {
         Log.d(TAG, "Tile removed");
-        resetClock();
+        resetClock(false);
     }
 
+    /**
+     *
+     */
     @Override
     public void onStartListening() {
         Log.d(TAG, "Started listening");
         isListening = true;
     }
 
+    /**
+     *
+     */
     @Override
     public void onStopListening() {
         Log.d(TAG, "Stopped listening");
         isListening = false;
     }
 
+    /**
+     *
+     */
     @Override
     public void onClick() {
         Log.d(TAG, "Tile clicked, last mode: " + mode.toString());
 
         switch(mode) {
             case INACTIVE:
-                mode = Mode.FIVE_MINS;
-                createTask();
-                break;
+            case ONE_MIN:
             case FIVE_MINS:
-                mode = Mode.TEN_MINS;
-                createTask();
-                break;
             case TEN_MINS:
-                mode = Mode.INFINITE_MINS;
+                mode = mode.next();
                 createTask();
                 break;
             case INFINITE_MINS:
-                resetTile();
-                resetClock();
+                resetClock(true);
                 break;
             default:
                 break;
         }
 
-        Log.d(TAG, "Mode changed: " + mode.getLabel());
+        Log.d(TAG, "Mode changed: " + mode.toString());
     }
 
-    @Override
-    public void onDestroy() {
-        resetClock();
-        super.onDestroy();
-    }
-
+    /**
+     *
+     */
     private void createTask() {
         timerTask = new AsyncTask<Clock, Clock, Void>() {
             @Override
             protected void onPreExecute() {
                 super.onPreExecute();
-                resetClock();
-                Tile t = getQsTile();
-                CLOCK.set(mode.getMin());
-                t.setState(Tile.STATE_ACTIVE);
-                t.setLabel(mode.getLabel());
-                t.updateTile();
-                //todo acquire wakelock
+                resetClock(false);
+                setTile();
             }
 
             @Override
@@ -178,7 +214,7 @@ public class CaffeineService extends TileService {
                             waitAndUpdate(clock);
                     }
                 } catch(InterruptedException e) {
-                    Log.i(TAG, "Caffeine mode changed " + e.getCause());
+                    Log.i(TAG, "Thread interrupted, Caffeine mode changed");
                 }
 
                 return null;
@@ -188,25 +224,20 @@ public class CaffeineService extends TileService {
             protected void onProgressUpdate(Clock... c) {
                 super.onProgressUpdate(c);
                 Tile tile = getQsTile();
-                tile.setLabel(c[0].toString());
-                Log.d(TAG, "Updating tile label: " + c[0].toString());
-                tile.updateTile();
-            }
-
-            @Override
-            protected void onCancelled(Void aVoid) {
-                resetClock();
-                //todo release wakelock
+                CaffeineService.updateTileLabel(tile, c[0].toString());
             }
 
             @Override
             protected void onPostExecute(Void aVoid) {
                 super.onPostExecute(aVoid);
-                resetTile();
-                resetClock();
-                //todo release wakelock
+                resetClock(true);
             }
 
+            /**
+             *
+             * @param clock
+             * @throws InterruptedException
+             */
             private void waitAndUpdate(Clock clock) throws InterruptedException {
                 Thread.sleep(1000);
                 clock.decrement();
@@ -216,17 +247,47 @@ public class CaffeineService extends TileService {
         }.execute(CLOCK);
     }
 
-    private void resetClock() {
+    private void resetClock(boolean finished) {
+        Log.i(TAG, "Resetting clock...");
         if(timerTask != null && timerTask.getStatus() != AsyncTask.Status.FINISHED)
             timerTask.cancel(true);
         timerTask = null;
+
+        releaseWakeLock();
+
+        if(finished)
+            resetTile();
+    }
+
+    private void setTile() {
+        if(!isWakeLockAcquired)
+            acquireWakeLock();
+        Tile tile = getQsTile();
+        CLOCK.set(mode.getMin());
+        tile.setState(Tile.STATE_ACTIVE);
+        updateTileLabel(tile, mode.getLabel());
     }
     
     private void resetTile() {
         mode = Mode.INACTIVE;
         Tile tile = getQsTile();
         tile.setState(Tile.STATE_INACTIVE);
-        tile.setLabel(mode.getLabel());
-        tile.updateTile();
+        updateTileLabel(tile, mode.getLabel());
+    }
+
+    private void acquireWakeLock() {
+        //todo acquire wakelock
+        isWakeLockAcquired = true;
+    }
+
+    private void releaseWakeLock() {
+        //todo release wakelock
+        isWakeLockAcquired = false;
+    }
+
+    private static void updateTileLabel(Tile t, String label) {
+        Log.d(TAG, "Updating tile label: " + label);
+        t.setLabel(label);
+        t.updateTile();
     }
 }
