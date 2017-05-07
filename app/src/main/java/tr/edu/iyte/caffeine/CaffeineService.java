@@ -1,13 +1,17 @@
 package tr.edu.iyte.caffeine;
 
+import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.drawable.Icon;
 import android.os.AsyncTask;
+import android.os.IBinder;
 import android.os.PowerManager;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import java.util.Locale;
@@ -39,12 +43,49 @@ public class CaffeineService extends TileService {
      *
      */
     public class PowerBroadcastReceiver extends BroadcastReceiver {
-
         @Override
         public void onReceive(Context context, Intent intent) {
             if(intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
                 Log.v(TAG, "PowerBroadcastReceiver: Received " + Intent.ACTION_SCREEN_OFF);
-                CaffeineService.this.reset();
+                mode = Mode.INACTIVE;
+                releaseWakeLock();
+                resetTimer();
+            }
+        }
+    }
+
+    public static class ReceiverService extends Service {
+        @Nullable
+        @Override
+        public IBinder onBind(Intent intent) {
+            return null;
+        }
+
+        @Override
+        public int onStartCommand(Intent intent, int flags, int startId) {
+            registerBroadcastReceiver();
+            return super.onStartCommand(intent, flags, startId);
+        }
+
+        @Override
+        public void onDestroy() {
+            unregisterBroadcastReceiver();
+            super.onDestroy();
+        }
+
+        private void registerBroadcastReceiver() {
+            if(!isBroadcastRegistered) {
+                registerReceiver(RECEIVER, new IntentFilter(Intent.ACTION_SCREEN_OFF));
+                isBroadcastRegistered = true;
+                Log.i(TAG, "Receiver registered");
+            }
+        }
+
+        private void unregisterBroadcastReceiver() {
+            if(isBroadcastRegistered) {
+                unregisterReceiver(RECEIVER);
+                isBroadcastRegistered = false;
+                Log.i(TAG, "Receiver unregistered");
             }
         }
     }
@@ -53,6 +94,9 @@ public class CaffeineService extends TileService {
      *
      */
     private static class Clock {
+        private static final int THIRTY_THREE = 33;
+        private static final int SIXTY_SIX = 66;
+
         private int min;
         private int sec;
 
@@ -71,6 +115,16 @@ public class CaffeineService extends TileService {
 
         private boolean isFinished() {
             return min == 0 && sec == 0;
+        }
+
+        private int getPercentage() {
+            int totalsec = min * 60 + sec;
+            float perc = (float) totalsec / (mode.getMin() * 60) * 100;
+            if(perc > THIRTY_THREE - 1 && perc < THIRTY_THREE + 1)
+                return THIRTY_THREE;
+            else if(perc > SIXTY_SIX - 1 && perc < SIXTY_SIX + 1)
+                return SIXTY_SIX;
+            else return 0;
         }
         
         @Override
@@ -128,17 +182,18 @@ public class CaffeineService extends TileService {
     private static final Clock CLOCK = new Clock();
 
     private static boolean isListening = false;
-    private static boolean isWakeLockAcquired = false;
     private static boolean isBroadcastRegistered = false;
     private static Mode mode = Mode.INACTIVE;
     private static AsyncTask<Clock, Clock, Void> timer = null;
     private static PowerManager.WakeLock wakeLock = null;
 
-    private final PowerBroadcastReceiver RECEIVER = new PowerBroadcastReceiver();
+    private static PowerBroadcastReceiver RECEIVER = null;
 
     @Override
     public void onTileAdded() {
         Log.d(TAG, "Tile added");
+        if(RECEIVER == null)
+            RECEIVER = new PowerBroadcastReceiver();
     }
 
     /**
@@ -158,6 +213,8 @@ public class CaffeineService extends TileService {
     @Override
     public void onStartListening() {
         Log.d(TAG, "Started listening");
+        if(mode == Mode.INACTIVE)
+            defaultTile();
         isListening = true;
     }
 
@@ -196,8 +253,10 @@ public class CaffeineService extends TileService {
      */
     private void createTimer() {
         resetTimer();
-        if(!isWakeLockAcquired)
-            acquireWakeLock();
+        if(!acquireWakeLock()) {
+            reset();
+            return;
+        }
 
         timer = new AsyncTask<Clock, Clock, Void>() {
             @Override
@@ -212,13 +271,11 @@ public class CaffeineService extends TileService {
                 Clock clock = c[0];
 
                 try {
-                    if(mode == Mode.INFINITE_MINS) {
-                        while(!Thread.interrupted()) // FIXME: 05/05/2017 is this true?
-                            Thread.sleep(30000);
-                    } else {
+                    if(mode == Mode.INFINITE_MINS)
+                        Thread.sleep(Long.MAX_VALUE);
+                    else
                         while(!clock.isFinished())
                             waitAndUpdate(clock);
-                    }
                 } catch(InterruptedException e) {
                     Log.v(TAG, "Thread interrupted, Caffeine mode changed");
                 }
@@ -256,8 +313,8 @@ public class CaffeineService extends TileService {
      *
      */
     private void reset() {
-        releaseWakeLock();
         defaultTile();
+        releaseWakeLock();
         resetTimer();
     }
 
@@ -278,8 +335,16 @@ public class CaffeineService extends TileService {
         Log.i(TAG, "Updating tile: " + label);
         Tile tile = getQsTile();
         tile.setLabel(label);
-        if(isModeChanged)
+
+        if(isModeChanged) {
             tile.setState(mode == Mode.INACTIVE ? Tile.STATE_INACTIVE : Tile.STATE_ACTIVE);
+            tile.setIcon(Icon.createWithResource(this, R.drawable.ic_caffeine_full));
+        } else if(CLOCK.getPercentage() == Clock.SIXTY_SIX) {
+            tile.setIcon(Icon.createWithResource(this, R.drawable.ic_caffeine_66percent));
+        } else if(CLOCK.getPercentage() == Clock.THIRTY_THREE) {
+            tile.setIcon(Icon.createWithResource(this, R.drawable.ic_caffeine_33percent));
+        }
+
         tile.updateTile();
     }
 
@@ -296,48 +361,31 @@ public class CaffeineService extends TileService {
     /**
      *
      */
-    private void acquireWakeLock() {
-        Log.i(TAG, "Acquiring wakelock..");
-        isWakeLockAcquired = true;
-        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-        wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "CaffeineWL");
-        wakeLock.acquire();
+    private boolean acquireWakeLock() {
+        if(wakeLock == null) {
+            Log.i(TAG, "Acquiring wakelock..");
+            PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+            wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "CaffeineWL");
+            wakeLock.acquire();
 
-        registerBroadcastReceiver();
+            if(startService(new Intent(CaffeineService.this, ReceiverService.class)) == null) {
+                Log.e(TAG, "Cannot start ReceiverService, Caffeine won't continue");
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
      *
      */
     private void releaseWakeLock() {
-        Log.i(TAG, "Releasing wakelock..");
-        if(wakeLock != null && wakeLock.isHeld())
+        if(wakeLock != null && wakeLock.isHeld()) {
+            Log.i(TAG, "Releasing wakelock..");
             wakeLock.release();
-        wakeLock = null;
-        isWakeLockAcquired = false;
-
-        unregisterBroadcastReceiver();
-    }
-
-    /**
-     *
-     */
-    private void registerBroadcastReceiver() {
-        if(!isBroadcastRegistered) {
-            registerReceiver(RECEIVER, new IntentFilter(Intent.ACTION_SCREEN_OFF));
-            isBroadcastRegistered = true;
-            Log.i(TAG, "Receiver registered");
+            wakeLock = null;
         }
-    }
 
-    /**
-     *
-     */
-    private void unregisterBroadcastReceiver() {
-        if(isBroadcastRegistered) {
-            unregisterReceiver(RECEIVER);
-            isBroadcastRegistered = false;
-            Log.i(TAG, "Receiver unregistered");
-        }
+        stopService(new Intent(this, ReceiverService.class));
     }
 }
