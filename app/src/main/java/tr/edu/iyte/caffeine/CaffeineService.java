@@ -321,7 +321,7 @@ public class CaffeineService extends TileService {
                         while(!clock.isFinished())
                             waitAndUpdate(clock);
                 } catch(InterruptedException e) {
-                    Log.v(TAG, "Thread interrupted, Caffeine mode changed");
+                    Log.i(TAG, "Caffeine mode changed to " + mode.toString());
                 }
 
                 return null;
