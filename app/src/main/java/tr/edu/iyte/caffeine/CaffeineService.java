@@ -131,10 +131,9 @@ public class CaffeineService extends TileService {
         private int getPercentage() {
             int totalsec = min * 60 + sec;
             float perc = (float) totalsec / (mode.getMin() * 60) * 100;
-            if(perc > THIRTY_THREE - 1 && perc < THIRTY_THREE + 1)
+            if(perc <= THIRTY_THREE)
                 return THIRTY_THREE;
-            /* todo */
-            else if(perc > SIXTY_SIX - 1 && perc < SIXTY_SIX + 1)
+            else if(perc <= SIXTY_SIX)
                 return SIXTY_SIX;
             else return 0;
         }
@@ -386,8 +385,13 @@ public class CaffeineService extends TileService {
         tile.setLabel(label);
 
         if(isModeChanged) {
-            tile.setState(mode == Mode.INACTIVE ? Tile.STATE_INACTIVE : Tile.STATE_ACTIVE);
-            tile.setIcon(Icon.createWithResource(this, R.drawable.ic_caffeine_full));
+            if(mode == Mode.INACTIVE) {
+                tile.setState(Tile.STATE_INACTIVE);
+                tile.setIcon(Icon.createWithResource(this, R.drawable.ic_caffeine_empty));
+            } else {
+                tile.setState(Tile.STATE_ACTIVE);
+                tile.setIcon(Icon.createWithResource(this, R.drawable.ic_caffeine_full));
+            }
         } else if(CLOCK.getPercentage() == Clock.SIXTY_SIX) {
             tile.setIcon(Icon.createWithResource(this, R.drawable.ic_caffeine_66percent));
         } else if(CLOCK.getPercentage() == Clock.THIRTY_THREE) {
