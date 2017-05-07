@@ -16,31 +16,17 @@ import android.util.Log;
 
 import java.util.Locale;
 
-/*
-    Long clicking on your quick settings tile will,
-    by default, go to your app’s ‘App Info’ screen.
-    You can override that behavior by adding an <intent-filter>
-    to one of your activities with ACTION_QS_TILE_PREFERENCES.
-
-    -----------------------------------------------------------------
-
-    In active mode, your TileService will still be bound for onTileAdded()
-    and onTileRemoved() (and for click events). However, the only time
-    you’ll get a callback to onStartListening() is after you call the static
-    TileService.requestListeningState() method. You’ll then be able to update
-    your tile exactly once before receiving a callback to onStopListening().
-    This gives you an easy one-shot ability to update your tile right when
-    your data changes whether the tile is visible or not.
- */
-
 /**
- * todo javadoc
+ * CaffeineService is a subclass of a {@link TileService}.
+ * Implements a tile to keep the screen awake for an amount
+ * of time which the user chooses.
  */
 @SuppressWarnings("deprecation")
 public class CaffeineService extends TileService {
 
     /**
-     *
+     * A subclass of {@link BroadcastReceiver} to capture {@link Intent#ACTION_SCREEN_OFF}.
+     * This broadcast effectively causes Caffeine to stop.
      */
     public class PowerBroadcastReceiver extends BroadcastReceiver {
         @Override
@@ -54,6 +40,10 @@ public class CaffeineService extends TileService {
         }
     }
 
+    /**
+     * A subclass of {@link Service} to register a persistent {@link PowerBroadcastReceiver}
+     * to the system. This way even if {@link CaffeineService} is unbound, broadcasts will be received.
+     */
     public static class ReceiverService extends Service {
         @Nullable
         @Override
@@ -73,6 +63,9 @@ public class CaffeineService extends TileService {
             super.onDestroy();
         }
 
+        /**
+         * Registers the {@link PowerBroadcastReceiver} to the system.
+         */
         private void registerBroadcastReceiver() {
             if(!isBroadcastRegistered) {
                 registerReceiver(RECEIVER, new IntentFilter(Intent.ACTION_SCREEN_OFF));
@@ -81,6 +74,9 @@ public class CaffeineService extends TileService {
             }
         }
 
+        /**
+         * Unregisters the {@link PowerBroadcastReceiver} from the system.
+         */
         private void unregisterBroadcastReceiver() {
             if(isBroadcastRegistered) {
                 unregisterReceiver(RECEIVER);
@@ -91,7 +87,7 @@ public class CaffeineService extends TileService {
     }
 
     /**
-     *
+     * An helper class to keep track of the time easily.
      */
     private static class Clock {
         private static final int THIRTY_THREE = 33;
@@ -100,11 +96,18 @@ public class CaffeineService extends TileService {
         private int min;
         private int sec;
 
+        /**
+         * Sets the {@link #min minutes} to the {@code min}, {@link #sec seconds} to {@code 0}.
+         * @param min Minutes to be set
+         */
         private void set(int min) {
             this.min = min;
             this.sec = 0;
         }
 
+        /**
+         * Decrements the clock by one second.
+         */
         private void decrement() {
             if(sec == 0) {
                 sec = 60;
@@ -113,20 +116,33 @@ public class CaffeineService extends TileService {
             --sec;
         }
 
+        /**
+         * Checks if the clock is 0:00.
+         * @return {@code true} if clock is finished, {@code false} otherwise.
+         */
         private boolean isFinished() {
             return min == 0 && sec == 0;
         }
 
+        /**
+         * Returns the remaining percentage of the clock for the current {@link Mode}.
+         * @return {@link #THIRTY_THREE} for %33 percentage, {@link #SIXTY_SIX} for %66 percentage, {@code 0} otherwise.
+         */
         private int getPercentage() {
             int totalsec = min * 60 + sec;
             float perc = (float) totalsec / (mode.getMin() * 60) * 100;
             if(perc > THIRTY_THREE - 1 && perc < THIRTY_THREE + 1)
                 return THIRTY_THREE;
+            /* todo */
             else if(perc > SIXTY_SIX - 1 && perc < SIXTY_SIX + 1)
                 return SIXTY_SIX;
             else return 0;
         }
-        
+
+        /**
+         * Returns a human readable form of a {@link Clock} object. Format is always {@code (m)m:ss}.
+         * @return
+         */
         @Override
         public String toString() {
             if(sec < 10)
@@ -136,7 +152,23 @@ public class CaffeineService extends TileService {
     }
 
     /**
-     *
+     * Mode enumerator for {@link CaffeineService}.
+     * Enumerator is based on a straightforward state machine between the modes.
+     * <p>
+     * The method {@link #next()} returns the next {@link Mode} in the state machine.
+     * <br>
+     * The method {@link #getMin()} returns the operation minutes of the mode.
+     * <br>
+     * The method {@link #getLabel()} returns the initial mode label for the {@link Tile}.
+     * <p>
+     * It consists of 5 modes:
+     * <ul>
+     *     <li>{@link #INACTIVE} is for doing nothing,</li>
+     *     <li>{@link #ONE_MIN} is for keeping screen on for 1 minutes,</li>
+     *     <li>{@link #FIVE_MINS} is for keeping screen on for 5 minutes,</li>
+     *     <li>{@link #TEN_MINS} is for keeping screen on for 10 minutes,</li>
+     *     <li>{@link #INFINITE_MINS} is for keeping screen on for indefinitely.</li>
+     * </ul>
      */
     private enum Mode {
         INACTIVE("Caffeine", 0),
@@ -191,44 +223,46 @@ public class CaffeineService extends TileService {
 
     @Override
     public void onTileAdded() {
-        Log.d(TAG, "Tile added");
         if(RECEIVER == null)
             RECEIVER = new PowerBroadcastReceiver();
+        Log.d(TAG, "Tile added");
     }
 
     /**
-     *
+     * When removing the tile, makes sure the service doesn't hold a
+     * {@link android.os.PowerManager.WakeLock} for keeping the screen on.
+     * Also clears all the background threads.
      */
     @Override
     public void onTileRemoved() {
-        Log.d(TAG, "Tile removed");
         releaseWakeLock();
         resetTimer();
         mode = Mode.INACTIVE;
+        Log.d(TAG, "Tile removed");
     }
 
     /**
-     *
+     * When tile is visible on the screen,
+     * resets the tile if the state is changed.
      */
     @Override
     public void onStartListening() {
-        Log.d(TAG, "Started listening");
         if(mode == Mode.INACTIVE)
             defaultTile();
         isListening = true;
+        Log.d(TAG, "Started listening");
     }
 
-    /**
-     *
-     */
     @Override
     public void onStopListening() {
-        Log.d(TAG, "Stopped listening");
         isListening = false;
+        Log.d(TAG, "Stopped listening");
     }
 
     /**
-     *
+     * Implementation of the {@link Mode} state machine.
+     * When tile is clicked, proceeds to the next mode
+     * and resets the timer.
      */
     @Override
     public void onClick() {
@@ -249,7 +283,18 @@ public class CaffeineService extends TileService {
     }
 
     /**
-     *
+     * First resets the {@link #timer} if there is one exists.
+     * Then tries to acquire a wakelock for keeping the screen on, if it fails, caffeine will continue.
+     * Then creates an {@link AsyncTask} for counting down from the current {@link Mode#min}.
+     * <p>
+     * {@link AsyncTask#onPreExecute()} prepares the {@link #CLOCK} with
+     * setting it for the current {@link Mode} and updating the tile.
+     * <br>
+     * {@link AsyncTask#doInBackground(Object[])} sleeps for some time and sends request to update the tile.
+     * <br>
+     * {@link AsyncTask#onProgressUpdate(Object[])} updates the tile with {@link Clock#toString()}
+     * <br>
+     * {@link AsyncTask#onPostExecute(Object)} resets everything because the {@link Clock#isFinished()} returned {@code true}.
      */
     private void createTimer() {
         resetTimer();
@@ -296,9 +341,10 @@ public class CaffeineService extends TileService {
             }
 
             /**
-             *
-             * @param clock
-             * @throws InterruptedException
+             * Waits for a second and calls {@link Clock#decrement()}.
+             * If tile is listening the updates, updates the tile.
+             * @param clock Current clock
+             * @throws InterruptedException If {@link Mode} is changed.
              */
             private void waitAndUpdate(Clock clock) throws InterruptedException {
                 Thread.sleep(1000);
@@ -310,7 +356,9 @@ public class CaffeineService extends TileService {
     }
 
     /**
-     *
+     * Resets the tile to the default values,
+     * releases the wakelock if there is one held,
+     * releases the background the tasks.
      */
     private void reset() {
         defaultTile();
@@ -319,7 +367,8 @@ public class CaffeineService extends TileService {
     }
 
     /**
-     *
+     * Sets the {@link #mode} to {@link Mode#INACTIVE}
+     * and updates tile to default values.
      */
     private void defaultTile() {
         mode = Mode.INACTIVE;
@@ -327,9 +376,9 @@ public class CaffeineService extends TileService {
     }
 
     /**
-     *
-     * @param isModeChanged
-     * @param label
+     * Updates tile according to given label and mode change flag.
+     * @param isModeChanged If the mode changed.
+     * @param label Label to be updated.
      */
     private void updateTile(boolean isModeChanged, String label) {
         Log.i(TAG, "Updating tile: " + label);
@@ -349,7 +398,7 @@ public class CaffeineService extends TileService {
     }
 
     /**
-     *
+     * Cancels the background task and releases it.
      */
     private void resetTimer() {
         Log.v(TAG, "Resetting timer");
@@ -359,7 +408,8 @@ public class CaffeineService extends TileService {
     }
 
     /**
-     *
+     * Tries to acquire a wakelock and registers the {@link ReceiverService}.
+     * @return {@code true} if wakelock is acquired and service is started, {@code false} otherwise.
      */
     private boolean acquireWakeLock() {
         if(wakeLock == null) {
@@ -377,7 +427,7 @@ public class CaffeineService extends TileService {
     }
 
     /**
-     *
+     * Tries to release the wakelock and unregisters the {@link ReceiverService}.
      */
     private void releaseWakeLock() {
         if(wakeLock != null && wakeLock.isHeld()) {
