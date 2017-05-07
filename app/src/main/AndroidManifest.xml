@@ -5,10 +5,10 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
-        android:allowBackup="true"
-        android:icon="@drawable/ic_caffeine_full"
+        android:allowBackup="false"
+        android:icon="@drawable/ic_caffeine_launcher"
         android:label="@string/tile_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@drawable/ic_caffeine_launcher"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
@@ -20,7 +20,6 @@
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
-            <!-- <meta-data android:name="android.service.quicksettings.ACTIVE_TILE" android:value="true" /> -->
         </service>
 
         <service android:name=".CaffeineService$ReceiverService" />
