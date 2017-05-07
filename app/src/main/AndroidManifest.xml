@@ -23,6 +23,8 @@
             <!-- <meta-data android:name="android.service.quicksettings.ACTIVE_TILE" android:value="true" /> -->
         </service>
 
+        <service android:name=".CaffeineService$ReceiverService" />
+
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
