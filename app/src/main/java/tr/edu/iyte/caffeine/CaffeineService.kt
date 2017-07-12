@@ -33,7 +33,9 @@ class CaffeineService : TileService(), ClockListener, AnkoLogger {
         Clock.listener = this
         CaffeineManager.context = this
 
-        if(Clock.isFinished())
+        if(isLocked)
+            updateTile(state = Tile.STATE_UNAVAILABLE)
+        else if(Clock.isFinished())
             updateTile()
     }
 
