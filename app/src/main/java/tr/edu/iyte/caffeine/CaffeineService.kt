@@ -5,6 +5,7 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import org.jetbrains.anko.AnkoLogger
 import org.jetbrains.anko.info
+import org.jetbrains.anko.verbose
 import tr.edu.iyte.caffeine.util.CaffeineManager
 import tr.edu.iyte.caffeine.util.Clock
 import tr.edu.iyte.caffeine.util.ClockListener
@@ -13,6 +14,12 @@ class CaffeineService : TileService(), ClockListener, AnkoLogger {
 
     override fun onClick() {
         super.onClick()
+
+        if(isLocked) {
+            verbose("Device locked, Caffeine won't operate")
+            return
+        }
+
         CaffeineManager.changeMode()
     }
 
