@@ -6,9 +6,9 @@
 
     <application
         android:allowBackup="false"
-        android:icon="@drawable/ic_caffeine_launcher"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/tile_name"
-        android:roundIcon="@drawable/ic_caffeine_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
