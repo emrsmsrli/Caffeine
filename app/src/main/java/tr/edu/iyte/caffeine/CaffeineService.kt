@@ -18,6 +18,7 @@ class CaffeineService : TileService(), ClockListener, AnkoLogger {
 
     override fun onTileAdded() {
         super.onTileAdded()
+        CaffeineManager.context = this
         info("Tile added")
     }
 
@@ -30,6 +31,7 @@ class CaffeineService : TileService(), ClockListener, AnkoLogger {
         super.onStartListening()
         info("Started listening")
         Clock.listener = this
+        CaffeineManager.context = this
 
         if(Clock.isFinished())
             updateTile()
@@ -38,6 +40,7 @@ class CaffeineService : TileService(), ClockListener, AnkoLogger {
     override fun onStopListening() {
         info("Stopped listening")
         Clock.listener = null
+        CaffeineManager.context = null
         super.onStopListening()
     }
 
@@ -45,7 +48,7 @@ class CaffeineService : TileService(), ClockListener, AnkoLogger {
             state: Int = Tile.STATE_INACTIVE,
             label: String = getString(R.string.tile_name),
             icon: Int = R.drawable.ic_caffeine_empty) {
-        qsTile?.state = state
+        qsTile.state = state
         qsTile.label = label
         qsTile.icon = Icon.createWithResource(this, icon)
         info("Updating label: $label")

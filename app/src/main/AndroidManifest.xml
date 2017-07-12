@@ -22,16 +22,8 @@
             </intent-filter>
         </service>
 
-        <service android:name=".CaffeineService$ReceiverService" />
+        <service android:name=".services.ScreenOffReceiverService" />
 
-        <receiver
-            android:name=".CaffeineService$PowerBroadcastReceiver"
-            android:enabled="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.SCREEN_OFF" />
-            </intent-filter>
-        </receiver>
     </application>
 
 </manifest>
