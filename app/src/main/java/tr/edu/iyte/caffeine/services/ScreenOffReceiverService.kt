@@ -29,4 +29,9 @@ class ScreenOffReceiverService : Service(), AnkoLogger {
             info("Screen off receiver unregistered")
         }
     }
+
+    companion object {
+        private var isBroadcastRegistered = false
+        private val RECEIVER = PowerBroadcastReceiver()
+    }
 }
