@@ -1,12 +1,16 @@
 package tr.edu.iyte.caffeine.util
 
+import android.content.Context
 import android.os.CountDownTimer
 import org.jetbrains.anko.AnkoLogger
+import java.lang.ref.WeakReference
 
 object Clock {
-    val FULL = 100
-    val THIRTY_THREE = 33
-    val SIXTY_SIX = 66
+    enum class Percentage(val value: Int) {
+        FULL(100),
+        SIXTY_SIX(66),
+        THIRTY_THREE(33)
+    }
 
     private var min: Int = 0
     private var sec: Int = 0
@@ -18,11 +22,11 @@ object Clock {
      * Sets [Clock.min] to the [min], [Clock.sec] to 0.
      * @param min Minutes to be set
     */
-    fun set(min: Int) {
+    fun set(context: Context, min: Int) {
         Clock.min = min
         sec = 0
         timer?.cancel()
-        timer = TimerObject.Timer(min)
+        timer = TimerObject.Timer(min, context)
         timer?.start()
     }
 
@@ -55,17 +59,17 @@ object Clock {
 
     /**
      * Returns the remaining percentage of the clock for the current [CaffeineMode].
-     * @return [THIRTY_THREE] for %33 percentage, [SIXTY_SIX] for %66 percentage, *0* otherwise.
+     * @return [Percentage.THIRTY_THREE] for %33 percentage,
+     * [Percentage.SIXTY_SIX] for %66 percentage, *0* otherwise.
      */
-    fun getPercentage(): Int {
+    fun getPercentage(): Percentage {
         val totalsec = min * 60 + sec
         val perc = totalsec.toFloat() / (CaffeineManager.mode.min * 60) * 100
-        if (perc <= THIRTY_THREE)
-            return THIRTY_THREE
-        else if (perc <= SIXTY_SIX)
-            return SIXTY_SIX
-        else
-            return FULL
+        return when {
+            perc <= Percentage.THIRTY_THREE.value -> Percentage.THIRTY_THREE
+            perc <= Percentage.SIXTY_SIX.value    -> Percentage.SIXTY_SIX
+            else                                  -> Percentage.FULL
+        }
     }
 
     /**
@@ -83,15 +87,17 @@ object Clock {
         const val SEC_IN_MILLIS = 1000L
         const val MIN_IN_MILLIS = 60 * SEC_IN_MILLIS
 
-        class Timer(min: Int) :
+        class Timer(min: Int, context: Context) :
                 CountDownTimer(min * MIN_IN_MILLIS, SEC_IN_MILLIS), AnkoLogger {
+            private val ctx = WeakReference<Context>(context)
+
             override fun onTick(millisUntilFinished: Long) {
                 decrement()
                 listener?.onTick()
             }
 
             override fun onFinish() {
-                CaffeineManager.reset()
+                CaffeineManager.reset(ctx.get()!!)
                 listener?.onFinish()
             }
         }

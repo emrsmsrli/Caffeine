@@ -6,6 +6,7 @@ import android.service.quicksettings.TileService
 import org.jetbrains.anko.AnkoLogger
 import org.jetbrains.anko.info
 import org.jetbrains.anko.verbose
+import org.jetbrains.anko.warn
 import tr.edu.iyte.caffeine.util.CaffeineManager
 import tr.edu.iyte.caffeine.util.Clock
 import tr.edu.iyte.caffeine.util.ClockListener
@@ -20,12 +21,11 @@ class CaffeineService : TileService(), ClockListener, AnkoLogger {
             return
         }
 
-        CaffeineManager.changeMode()
+        CaffeineManager.changeMode(applicationContext)
     }
 
     override fun onTileAdded() {
         super.onTileAdded()
-        CaffeineManager.context = this
         info("Tile added")
     }
 
@@ -38,7 +38,6 @@ class CaffeineService : TileService(), ClockListener, AnkoLogger {
         super.onStartListening()
         info("Started listening")
         Clock.listener = this
-        CaffeineManager.context = this
 
         if(Clock.isFinished())
             updateTile()
@@ -47,7 +46,6 @@ class CaffeineService : TileService(), ClockListener, AnkoLogger {
     override fun onStopListening() {
         info("Stopped listening")
         Clock.listener = null
-        CaffeineManager.context = null
         super.onStopListening()
     }
 
@@ -66,9 +64,9 @@ class CaffeineService : TileService(), ClockListener, AnkoLogger {
         updateTile(state = Tile.STATE_ACTIVE,
                 label = Clock.toString(),
                 icon = when(Clock.getPercentage()) {
-                    Clock.SIXTY_SIX -> R.drawable.ic_caffeine_66percent
-                    Clock.THIRTY_THREE -> R.drawable.ic_caffeine_33percent
-                    else -> R.drawable.ic_caffeine_full
+                    Clock.Percentage.FULL           -> R.drawable.ic_caffeine_full
+                    Clock.Percentage.SIXTY_SIX      -> R.drawable.ic_caffeine_66percent
+                    Clock.Percentage.THIRTY_THREE   -> R.drawable.ic_caffeine_33percent
                 })
     }
 
