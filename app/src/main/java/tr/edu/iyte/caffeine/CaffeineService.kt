@@ -53,11 +53,11 @@ class CaffeineService : TileService(), ClockListener, AnkoLogger {
             state: Int = Tile.STATE_INACTIVE,
             label: String = getString(R.string.tile_name),
             icon: Int = R.drawable.ic_caffeine_empty) {
-        qsTile.state = state
-        qsTile.label = label
-        qsTile.icon = Icon.createWithResource(this, icon)
+        qsTile?.state = state
+        qsTile?.label = label
+        qsTile?.icon = Icon.createWithResource(this, icon)
         info("Updating label: $label")
-        qsTile.updateTile()
+        qsTile?.updateTile()
     }
 
     override fun onTick() {
