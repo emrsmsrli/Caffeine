@@ -27,15 +27,3 @@ fun Loggable.verbose(message: Any) {
         Log.v(tag, message.toString())
     }
 }
-
-fun Loggable.warn(message: Any) {
-    if (Log.isLoggable(tag, Log.WARN)) {
-        Log.w(tag, message.toString())
-    }
-}
-
-fun Loggable.error(message: Any) {
-    if (Log.isLoggable(tag, Log.ERROR)) {
-        Log.e(tag, message.toString())
-    }
-}
