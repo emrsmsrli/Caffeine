@@ -2,7 +2,6 @@ package tr.edu.iyte.caffeine.util
 
 import android.content.Context
 import android.os.CountDownTimer
-import org.jetbrains.anko.AnkoLogger
 import java.lang.ref.WeakReference
 
 object Clock {
@@ -88,7 +87,7 @@ object Clock {
         const val MIN_IN_MILLIS = 60 * SEC_IN_MILLIS
 
         class Timer(min: Int, context: Context) :
-                CountDownTimer(min * MIN_IN_MILLIS, SEC_IN_MILLIS), AnkoLogger {
+                CountDownTimer(min * MIN_IN_MILLIS, SEC_IN_MILLIS) {
             private val ctx = WeakReference<Context>(context)
 
             override fun onTick(millisUntilFinished: Long) {

@@ -3,13 +3,10 @@ package tr.edu.iyte.caffeine.services
 import android.app.Service
 import android.content.Intent
 import android.content.IntentFilter
-import org.jetbrains.anko.AnkoLogger
-import org.jetbrains.anko.info
+import tr.edu.iyte.caffeine.util.Loggable
+import tr.edu.iyte.caffeine.util.info
 
-private var isBroadcastRegistered = false
-private val RECEIVER = PowerBroadcastReceiver()
-
-class ScreenOffReceiverService : Service(), AnkoLogger {
+class ScreenOffReceiverService : Service(), Loggable {
     override fun onBind(intent: Intent?) = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

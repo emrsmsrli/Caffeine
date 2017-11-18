@@ -3,15 +3,9 @@ package tr.edu.iyte.caffeine
 import android.graphics.drawable.Icon
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import org.jetbrains.anko.AnkoLogger
-import org.jetbrains.anko.info
-import org.jetbrains.anko.verbose
-import org.jetbrains.anko.warn
-import tr.edu.iyte.caffeine.util.CaffeineManager
-import tr.edu.iyte.caffeine.util.Clock
-import tr.edu.iyte.caffeine.util.ClockListener
+import tr.edu.iyte.caffeine.util.*
 
-class CaffeineService : TileService(), ClockListener, AnkoLogger {
+class CaffeineService : TileService(), ClockListener, Loggable {
 
     override fun onClick() {
         super.onClick()

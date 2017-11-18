@@ -2,10 +2,9 @@ package tr.edu.iyte.caffeine.util
 
 import android.content.Context
 import android.os.PowerManager
-import org.jetbrains.anko.*
 import tr.edu.iyte.caffeine.services.ScreenOffReceiverService
 
-object CaffeineManager : AnkoLogger {
+object CaffeineManager : Loggable {
     private var wakeLock: PowerManager.WakeLock? = null
     var mode = CaffeineMode.INACTIVE
         private set
