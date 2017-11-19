@@ -33,7 +33,7 @@ object CaffeineManager : Loggable {
 
     @Suppress("deprecation")
     private fun acquireWakeLock(context: Context, min: Int) {
-        if(wakeLock != null)
+        if(wakeLock != null && wakeLock!!.isHeld)
             wakeLock?.release()
 
         info("Acquiring wakelock..")

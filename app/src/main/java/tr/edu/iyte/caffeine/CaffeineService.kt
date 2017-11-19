@@ -24,7 +24,8 @@ class CaffeineService : TileService(), ClockListener, Loggable {
     }
 
     override fun onTileRemoved() {
-        info("Tile removed")
+        info("Removing Caffeine tile")
+        CaffeineManager.reset(applicationContext)
         super.onTileRemoved()
     }
 
