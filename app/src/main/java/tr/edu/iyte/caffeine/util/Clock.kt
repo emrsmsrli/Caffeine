@@ -91,8 +91,8 @@ object Clock {
             private val ctx = WeakReference<Context>(context)
 
             override fun onTick(millisUntilFinished: Long) {
-                decrement()
                 listener?.onTick()
+                decrement()
             }
 
             override fun onFinish() {
