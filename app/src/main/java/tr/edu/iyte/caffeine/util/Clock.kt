@@ -13,6 +13,8 @@ object Clock {
 
     private var min: Int = 0
     private var sec: Int = 0
+    private var isCancelled = false
+    private var isPaused = false
 
     private var timer: TimerObject.Timer? = null
     var listener: ClockListener? = null
@@ -27,6 +29,7 @@ object Clock {
         timer?.cancel()
         timer = TimerObject.Timer(min, context)
         timer?.start()
+        isCancelled = false
     }
 
     /**
@@ -37,6 +40,28 @@ object Clock {
         sec = 0
         timer?.cancel()
         listener?.onFinish()
+        isCancelled = true
+    }
+
+    /**
+     * Pauses the clock
+     */
+    fun pause() {
+        if(!isCancelled && !isPaused) {
+            timer?.cancel()
+            isPaused = true
+        }
+    }
+
+    /**
+     * Resumes the clock
+     */
+    fun resume(context: Context) {
+        if(!isCancelled && isPaused) {
+            timer = TimerObject.Timer(min, context)
+            timer?.start()
+            isPaused = false
+        }
     }
 
     /**
@@ -87,7 +112,7 @@ object Clock {
         const val MIN_IN_MILLIS = 60 * SEC_IN_MILLIS
 
         class Timer(min: Int, context: Context) :
-                CountDownTimer(min * MIN_IN_MILLIS, SEC_IN_MILLIS) {
+                CountDownTimer(min * MIN_IN_MILLIS + 2 * SEC_IN_MILLIS, SEC_IN_MILLIS) {
             private val ctx = WeakReference<Context>(context)
 
             override fun onTick(millisUntilFinished: Long) {
