@@ -5,7 +5,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
-import tr.edu.iyte.caffeine.util.*
+import tr.edu.iyte.caffeine.Clock
+import tr.edu.iyte.caffeine.extensions.*
 
 class ScreenOffReceiverService : Service(), Loggable {
     private val callListener = object : PhoneStateListener() {

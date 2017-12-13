@@ -1,4 +1,4 @@
-package tr.edu.iyte.caffeine.util
+package tr.edu.iyte.caffeine.extensions
 
 import android.app.Service
 import android.content.Context
