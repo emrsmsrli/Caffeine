@@ -1,10 +1,15 @@
-package tr.edu.iyte.caffeine.util
+package tr.edu.iyte.caffeine
 
 import android.content.Context
 import android.os.CountDownTimer
 import java.lang.ref.WeakReference
 
 object Clock {
+    interface ClockListener {
+        fun onTick()
+        fun onFinish()
+    }
+
     enum class Percentage(val value: Int) {
         FULL(100),
         SIXTY_SIX(66),
@@ -84,7 +89,7 @@ object Clock {
     /**
      * Returns the remaining percentage of the clock for the current [CaffeineMode].
      * @return [Percentage.THIRTY_THREE] for %33 percentage,
-     * [Percentage.SIXTY_SIX] for %66 percentage, *0* otherwise.
+     * [Percentage.SIXTY_SIX] for %66 percentage, [Percentage.FULL] otherwise.
      */
     fun getPercentage(): Percentage {
         val totalsec = min * 60 + sec
@@ -92,7 +97,7 @@ object Clock {
         return when {
             perc <= Percentage.THIRTY_THREE.value -> Percentage.THIRTY_THREE
             perc <= Percentage.SIXTY_SIX.value    -> Percentage.SIXTY_SIX
-            else                                  -> Percentage.FULL
+            else                                                             -> Percentage.FULL
         }
     }
 
