@@ -1,4 +1,4 @@
-package tr.edu.iyte.caffeine.util
+package tr.edu.iyte.caffeine.extensions
 
 import android.util.Log
 
@@ -19,11 +19,5 @@ private fun getTag(clazz: Class<*>): String {
 fun Loggable.info(message: Any) {
     if (Log.isLoggable(tag, Log.INFO)) {
         Log.i(tag, message.toString())
-    }
-}
-
-fun Loggable.verbose(message: Any) {
-    if (Log.isLoggable(tag, Log.VERBOSE)) {
-        Log.v(tag, message.toString())
     }
 }
