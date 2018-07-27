@@ -7,9 +7,11 @@ Caffeine keeps you awake for
 * 1 min
 * 5 mins
 * 10 mins
+* 30 mins
+* 1 hour
 * and for infinite!
 
 Suggestions and critics are welcome!
 
 ### Known issues
-- App does not work above Android SDK 26
+- None
