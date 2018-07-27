@@ -1,4 +1,4 @@
-package tr.edu.iyte.caffeine.extensions
+package tr.edu.iyte.caffeine.util
 
 import android.util.Log
 

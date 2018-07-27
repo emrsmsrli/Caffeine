@@ -4,6 +4,7 @@
           package="tr.edu.iyte.caffeine">
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:allowBackup="false"
@@ -14,7 +15,7 @@
         tools:ignore="GoogleAppIndexingWarning">
 
         <service
-            android:name=".CaffeineService"
+            android:name=".CaffeineTileService"
             android:icon="@drawable/ic_caffeine_empty"
             android:label="@string/tile_name"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
@@ -22,9 +23,6 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
-
-        <service android:name=".services.ScreenOffReceiverService" />
-
     </application>
 
 </manifest>
