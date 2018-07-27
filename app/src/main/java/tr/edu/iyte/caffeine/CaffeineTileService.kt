@@ -92,7 +92,6 @@ class CaffeineTileService : TileService(), Loggable {
             CaffeineMode.INFINITE_MINS -> {
                 reset()
                 updateTile()
-                currentTimer?.cancel()
             }
             else                       -> {
                 if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && currentTimer == null) {
