@@ -100,7 +100,7 @@ class CaffeineTileService : TileService(), Loggable {
                                     "Caffeine Notification Channel",
                                     NotificationManager.IMPORTANCE_HIGH))
                     val notif = NotificationCompat.Builder(this, "caffeine_channel")
-                            .setSmallIcon(R.drawable.ic_caffeine_full)
+                            .setSmallIcon(android.R.color.transparent)
                             .setContentText("Caffeine is running")
                             .setOngoing(true)
                             .setCategory(Notification.CATEGORY_SERVICE)
