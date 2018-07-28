@@ -113,6 +113,7 @@ class CaffeineTileService : TileService(), Loggable {
                 acquireWakelock(mode.min.toSeconds())
                 registerInterruptionListeners()
 
+                currentTimer?.cancel()
                 updateTile(state = Tile.STATE_ACTIVE, label = mode.label, icon = icCaffeineFull)
                 currentTimer = Timer(mode.min.toSeconds())
                 currentTimer?.start()
