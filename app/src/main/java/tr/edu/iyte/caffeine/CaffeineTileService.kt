@@ -3,10 +3,7 @@ package tr.edu.iyte.caffeine
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.CountDownTimer
@@ -26,14 +23,15 @@ class CaffeineTileService : TileService(), Loggable {
             val min = sec / 60
             val percentage = sec / secs.toFloat()
 
-            if(secs < Int.MAX_VALUE)
-                updateTile(state = Tile.STATE_ACTIVE,
-                        label = String.format("%d:%02d", min, sec % 60),
-                        icon = when {
-                            percentage > .66 -> icCaffeineFull
-                            percentage > .33 -> icCaffeine66percent
-                            else             -> icCaffeine33percent
-                        })
+            if(secs >= Int.MAX_VALUE)
+                return
+            updateTile(state = Tile.STATE_ACTIVE,
+                    label = String.format("%d:%02d", min, sec % 60),
+                    icon = when {
+                        percentage > .66 -> icCaffeineFull
+                        percentage > .33 -> icCaffeine66percent
+                        else             -> icCaffeine33percent
+                    })
         }
 
         override fun onFinish() {
@@ -44,10 +42,10 @@ class CaffeineTileService : TileService(), Loggable {
 
     inner class ScreenOffReceiver : BroadcastReceiver(), Loggable {
         override fun onReceive(context: Context, intent: Intent) {
-            if(intent.action == Intent.ACTION_SCREEN_OFF) {
-                info("Received ${Intent.ACTION_SCREEN_OFF}, intent: $intent")
-                reset()
-            }
+            if(intent.action != Intent.ACTION_SCREEN_OFF)
+                return
+            info("Received ${Intent.ACTION_SCREEN_OFF}, intent: $intent")
+            reset()
         }
     }
 
@@ -71,6 +69,7 @@ class CaffeineTileService : TileService(), Loggable {
 
     override fun onTileAdded() {
         super.onTileAdded()
+        isCaffeineRunning = false
         info("tile added")
     }
 
@@ -94,7 +93,7 @@ class CaffeineTileService : TileService(), Loggable {
                 updateTile()
             }
             else                       -> {
-                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && currentTimer == null) {
+                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isCaffeineRunning) {
                     notificationManager.createNotificationChannel(
                             NotificationChannel("caffeine_channel",
                                     "Caffeine Notification Channel",
@@ -119,6 +118,7 @@ class CaffeineTileService : TileService(), Loggable {
                 updateTile(state = Tile.STATE_ACTIVE, label = mode.label, icon = icCaffeineFull)
                 currentTimer = Timer(mode.min.toSeconds())
                 currentTimer?.start()
+                isCaffeineRunning = true
             }
         }
     }
@@ -138,18 +138,23 @@ class CaffeineTileService : TileService(), Loggable {
         releaseWakelock()
         currentTimer?.cancel()
         currentTimer = null
+        isCaffeineRunning = false
     }
 
     private fun registerInterruptionListeners() {
-        registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
-        telephonyManager.listen(callListener, PhoneStateListener.LISTEN_CALL_STATE)
-        info("Screen off receiver and call listener registered")
+        if(!isCaffeineRunning) {
+            registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+            telephonyManager.listen(callListener, PhoneStateListener.LISTEN_CALL_STATE)
+            info("Screen off receiver and call listener registered")
+        }
     }
 
     private fun unregisterInterruptionListeners() {
-        unregisterReceiver(screenOffReceiver)
-        telephonyManager.listen(callListener, PhoneStateListener.LISTEN_NONE)
-        info("Screen off receiver and call listener unregistered")
+        if(isCaffeineRunning) {
+            unregisterReceiver(screenOffReceiver)
+            telephonyManager.listen(callListener, PhoneStateListener.LISTEN_NONE)
+            info("Screen off receiver and call listener unregistered")
+        }
     }
 
     @Suppress("deprecation")
