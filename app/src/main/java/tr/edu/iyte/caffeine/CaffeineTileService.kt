@@ -102,6 +102,7 @@ class CaffeineTileService : TileService(), Loggable {
                     val notif = NotificationCompat.Builder(this, "caffeine_channel")
                             .setSmallIcon(R.drawable.ic_caffeine_full)
                             .setContentText("Caffeine is running")
+                            .setOngoing(true)
                             .setCategory(Notification.CATEGORY_SERVICE)
                             .build()
                     startForeground(1, notif)
