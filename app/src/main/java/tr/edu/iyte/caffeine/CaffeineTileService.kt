@@ -100,12 +100,13 @@ class CaffeineTileService : TileService(), Loggable {
                                     "Caffeine Notification Channel",
                                     NotificationManager.IMPORTANCE_HIGH))
                     val notif = NotificationCompat.Builder(this, "caffeine_channel")
+                            .setOnlyAlertOnce(true)
                             .setSmallIcon(android.R.color.transparent)
                             .setContentText("Caffeine is running")
                             .setOngoing(true)
                             .setCategory(Notification.CATEGORY_SERVICE)
                             .build()
-                    startForeground(1, notif)
+                    startForeground(85, notif)
                 }
 
                 mode = mode.next()
