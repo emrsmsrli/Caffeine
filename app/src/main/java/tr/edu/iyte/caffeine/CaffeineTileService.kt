@@ -37,6 +37,13 @@ class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener 
         super.onStartListening()
         info("started listening")
 
+        if(isLocked) {
+            info("phone is locked, caffeine won't operate")
+            updateTile(state = Tile.STATE_UNAVAILABLE)
+            return
+        }
+
+
         startService<TimerService>()
         if(!applicationContext.bindService(intent<TimerService>(), timerServiceConnection, 0))
             updateTile(state = Tile.STATE_UNAVAILABLE)
@@ -46,13 +53,6 @@ class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener 
 
     override fun onClick() {
         super.onClick()
-
-        if(isLocked) {
-            info("phone is locked, caffeine won't operate")
-            updateTile(state = Tile.STATE_UNAVAILABLE)
-            return
-        }
-
         timerService?.onModeChange()
     }
 
