@@ -29,7 +29,7 @@ inline fun <reified T: Context> Context.intent(): Intent =
         Intent(this, T::class.java)
 
 inline fun <reified T: Service> Context.startService() =
-        startService(intent<T>())
+        startService(intent<T>()) != null
 
 inline fun <reified T: Service> Context.stopService() =
         stopService(intent<T>())
