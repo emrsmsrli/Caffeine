@@ -1,69 +1,29 @@
 package tr.edu.iyte.caffeine
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.*
+import android.content.ComponentName
+import android.content.ServiceConnection
 import android.graphics.drawable.Icon
-import android.os.Build
-import android.os.CountDownTimer
-import android.os.PowerManager
+import android.os.IBinder
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import android.telephony.PhoneStateListener
-import android.telephony.TelephonyManager
-import androidx.core.app.NotificationCompat
 import tr.edu.iyte.caffeine.util.*
 
-class CaffeineTileService : TileService(), Loggable {
-    inner class Timer(private val secs: Long) :
-            CountDownTimer(secs.toMillis() + 300, 500) {
-        override fun onTick(millisUntilFinished: Long) {
-            val sec = millisUntilFinished / 1000
-            val min = sec / 60
-            val percentage = sec / secs.toFloat()
-
-            if(secs >= Int.MAX_VALUE)
-                return
-            updateTile(state = Tile.STATE_ACTIVE,
-                    label = String.format("%d:%02d", min, sec % 60),
-                    icon = when {
-                        percentage > .66 -> icCaffeineFull
-                        percentage > .33 -> icCaffeine66percent
-                        else             -> icCaffeine33percent
-                    })
-        }
-
-        override fun onFinish() {
-            reset()
-            updateTile()
-        }
-    }
-
-    inner class ScreenOffReceiver : BroadcastReceiver(), Loggable {
-        override fun onReceive(context: Context, intent: Intent) {
-            if(intent.action != Intent.ACTION_SCREEN_OFF)
-                return
-            info("Received ${Intent.ACTION_SCREEN_OFF}, intent: $intent")
-            reset()
-        }
-    }
-
+class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener {
     private val icCaffeineEmpty by lazy { Icon.createWithResource(this, R.drawable.ic_caffeine_empty) }
     private val icCaffeineFull by lazy { Icon.createWithResource(this, R.drawable.ic_caffeine_full) }
     private val icCaffeine66percent by lazy { Icon.createWithResource(this, R.drawable.ic_caffeine_66percent) }
     private val icCaffeine33percent by lazy { Icon.createWithResource(this, R.drawable.ic_caffeine_33percent) }
 
-    private var wakelock: PowerManager.WakeLock? = null
-    private var mode = CaffeineMode.INACTIVE
-    private var currentTimer: Timer? = null
+    private var timerService: TimerService? = null
+    private val timerServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(cn: ComponentName?, binder: IBinder?) {
+            timerService = (binder as TimerService.TimerServiceProxy).get()
+            timerService?.listener = this@CaffeineTileService
+        }
 
-    private val screenOffReceiver = ScreenOffReceiver()
-    private val callListener = object : PhoneStateListener() {
-        override fun onCallStateChanged(state: Int, incomingNumber: String?) {
-            super.onCallStateChanged(state, incomingNumber)
-            if(state == TelephonyManager.CALL_STATE_OFFHOOK)
-                reset()
+        override fun onServiceDisconnected(cn: ComponentName?) {
+            timerService?.listener = null
+            timerService = null
         }
     }
 
@@ -73,10 +33,15 @@ class CaffeineTileService : TileService(), Loggable {
         info("tile added")
     }
 
-    override fun onTileRemoved() {
-        info("tile removed")
-        reset()
-        super.onTileRemoved()
+    override fun onStartListening() {
+        super.onStartListening()
+        info("started listening")
+
+        startService<TimerService>()
+        if(!applicationContext.bindService(intent<TimerService>(), timerServiceConnection, 0))
+            updateTile(state = Tile.STATE_UNAVAILABLE)
+        else if(!isCaffeineRunning)
+            updateTile()
     }
 
     override fun onClick() {
@@ -84,94 +49,39 @@ class CaffeineTileService : TileService(), Loggable {
 
         if(isLocked) {
             info("phone is locked, caffeine won't operate")
+            updateTile(state = Tile.STATE_UNAVAILABLE)
             return
         }
 
-        when(mode) {
-            CaffeineMode.INFINITE_MINS -> {
-                reset()
-                updateTile()
-            }
-            else                       -> {
-                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isCaffeineRunning) {
-                    notificationManager.createNotificationChannel(
-                            NotificationChannel("caffeine_channel",
-                                    "Caffeine Notification Channel",
-                                    NotificationManager.IMPORTANCE_HIGH))
-                    val notif = NotificationCompat.Builder(this, "caffeine_channel")
-                            .setOnlyAlertOnce(true)
-                            .setSmallIcon(android.R.color.transparent)
-                            .setContentText("Caffeine is running")
-                            .setOngoing(true)
-                            .setCategory(Notification.CATEGORY_SERVICE)
-                            .build()
-                    startForeground(85, notif)
-                }
-
-                mode = mode.next()
-                currentTimer?.cancel()
-
-                acquireWakelock(mode.min.toSeconds())
-                registerInterruptionListeners()
-
-                currentTimer?.cancel()
-                updateTile(state = Tile.STATE_ACTIVE, label = mode.label, icon = icCaffeineFull)
-                currentTimer = Timer(mode.min.toSeconds())
-                currentTimer?.start()
-                isCaffeineRunning = true
-            }
-        }
+        timerService?.onModeChange()
     }
 
-    override fun onStartListening() {
-        super.onStartListening()
-        if(currentTimer == null)
-            updateTile()
+    override fun onStopListening() {
+        applicationContext.unbindService(timerServiceConnection)
+        info("stopped listening")
+        super.onStopListening()
     }
 
-    private fun reset() {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            stopForeground(true)
-
-        mode = CaffeineMode.INACTIVE
-        unregisterInterruptionListeners()
-        releaseWakelock()
-        currentTimer?.cancel()
-        currentTimer = null
-        isCaffeineRunning = false
+    override fun onTileRemoved() {
+        info("tile removed")
+        if(isCaffeineRunning)
+            timerService?.onReset()
+        stopService<TimerService>()
+        super.onTileRemoved()
     }
 
-    private fun registerInterruptionListeners() {
-        if(!isCaffeineRunning) {
-            registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
-            telephonyManager.listen(callListener, PhoneStateListener.LISTEN_CALL_STATE)
-            info("Screen off receiver and call listener registered")
-        }
+    override fun onTick(label: String, percentage: Float) {
+        updateTile(state = Tile.STATE_ACTIVE,
+                label = label,
+                icon = when {
+                    percentage > .66 -> icCaffeineFull
+                    percentage > .33 -> icCaffeine66percent
+                    else             -> icCaffeine33percent
+                })
     }
 
-    private fun unregisterInterruptionListeners() {
-        if(isCaffeineRunning) {
-            unregisterReceiver(screenOffReceiver)
-            telephonyManager.listen(callListener, PhoneStateListener.LISTEN_NONE)
-            info("Screen off receiver and call listener unregistered")
-        }
-    }
-
-    @Suppress("deprecation")
-    private fun acquireWakelock(secs: Long) {
-        releaseWakelock()
-
-        info("Acquiring wakelock..")
-        wakelock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "CaffeineWL")
-        wakelock?.acquire(secs.toMillis())
-    }
-
-    private fun releaseWakelock() {
-        if(wakelock == null || !wakelock!!.isHeld)
-            return
-        info("Releasing wakelock..")
-        wakelock?.release()
-        wakelock = null
+    override fun onFinish() {
+        updateTile()
     }
 
     private fun updateTile(
