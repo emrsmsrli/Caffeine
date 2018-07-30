@@ -21,10 +21,7 @@ class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener 
             timerService?.listener = this@CaffeineTileService
         }
 
-        override fun onServiceDisconnected(cn: ComponentName?) {
-            timerService?.listener = null
-            timerService = null
-        }
+        override fun onServiceDisconnected(cn: ComponentName?) {}
     }
 
     override fun onTileAdded() {
@@ -43,7 +40,6 @@ class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener 
             return
         }
 
-
         if(!startService<TimerService>()
             || !applicationContext.bindService(intent<TimerService>(), timerServiceConnection, 0))
             updateTile(state = Tile.STATE_UNAVAILABLE)
@@ -57,7 +53,9 @@ class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener 
     }
 
     override fun onStopListening() {
+        timerService?.listener = null
         applicationContext.unbindService(timerServiceConnection)
+        timerService = null
         info("stopped listening")
         super.onStopListening()
     }
