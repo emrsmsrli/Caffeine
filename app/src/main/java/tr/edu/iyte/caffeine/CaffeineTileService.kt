@@ -14,11 +14,18 @@ class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener 
     private val icCaffeine66percent by lazy { Icon.createWithResource(this, R.drawable.ic_caffeine_66percent) }
     private val icCaffeine33percent by lazy { Icon.createWithResource(this, R.drawable.ic_caffeine_33percent) }
 
+    private var isRemovingTile = false
+
     private var timerService: TimerService? = null
     private val timerServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(cn: ComponentName?, binder: IBinder?) {
             timerService = (binder as TimerService.TimerServiceProxy).get()
             timerService?.listener = this@CaffeineTileService
+
+            if(isRemovingTile) {
+                timerService?.onReset()
+                stopService<TimerService>()
+            }
         }
 
         override fun onServiceDisconnected(cn: ComponentName?) {}
@@ -62,9 +69,8 @@ class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener 
 
     override fun onTileRemoved() {
         info("tile removed")
-        if(isCaffeineRunning)
-            timerService?.onReset()
-        stopService<TimerService>()
+        isRemovingTile = isCaffeineRunning
+        applicationContext.bindService(intent<TimerService>(), timerServiceConnection, 0)
         super.onTileRemoved()
     }
 
