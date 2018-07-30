@@ -61,9 +61,11 @@ class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener 
     }
 
     override fun onStopListening() {
-        timerService?.listener = null
-        applicationContext.unbindService(timerServiceConnection)
-        timerService = null
+        if(timerService != null) {
+            timerService?.listener = null
+            applicationContext.unbindService(timerServiceConnection)
+            timerService = null
+        }
         info("stopped listening")
         super.onStopListening()
     }
