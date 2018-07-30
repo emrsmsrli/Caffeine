@@ -69,9 +69,10 @@ class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener 
 
     override fun onTileRemoved() {
         info("tile removed")
-        isRemovingTile = isCaffeineRunning
-        if(isRemovingTile)
+        if(isCaffeineRunning) {
+            isRemovingTile = true
             applicationContext.bindService(intent<TimerService>(), timerServiceConnection, 0)
+        }
         super.onTileRemoved()
     }
 
