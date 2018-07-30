@@ -34,6 +34,7 @@ class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener 
     override fun onTileAdded() {
         super.onTileAdded()
         isCaffeineRunning = false
+        isRemovingTile = false
         info("tile added")
     }
 
