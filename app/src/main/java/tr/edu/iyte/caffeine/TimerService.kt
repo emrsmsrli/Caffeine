@@ -92,13 +92,12 @@ class TimerService : Service(), Loggable {
 
                 mode = mode.next()
                 currentTimer?.cancel()
+                currentTimer = Timer(mode.min.toSeconds())
 
                 acquireWakelock(mode.min.toSeconds())
                 registerInterruptionListeners()
 
-                currentTimer?.cancel()
                 listener?.onTick(mode.label, 1f)
-                currentTimer = Timer(mode.min.toSeconds())
                 currentTimer?.start()
                 isCaffeineRunning = true
             }
@@ -106,15 +105,15 @@ class TimerService : Service(), Loggable {
     }
 
     fun onReset() {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            stopForeground(true)
-
         mode = CaffeineMode.INACTIVE
         unregisterInterruptionListeners()
         releaseWakelock()
         currentTimer?.cancel()
         currentTimer = null
         isCaffeineRunning = false
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            stopForeground(true)
     }
 
     private fun registerInterruptionListeners() {
