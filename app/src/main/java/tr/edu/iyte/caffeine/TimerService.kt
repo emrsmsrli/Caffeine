@@ -71,8 +71,8 @@ class TimerService : Service(), Loggable {
     fun onModeChange() {
         when(mode) {
             CaffeineMode.INFINITE_MINS -> {
-                listener?.onFinish()
                 onReset()
+                listener?.onFinish()
             }
             else                       -> {
                 if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isCaffeineRunning) {
