@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Binder
-import android.os.Build
 import android.os.CountDownTimer
 import android.os.PowerManager
 import android.telephony.PhoneStateListener
@@ -75,7 +74,10 @@ class TimerService : Service(), Loggable {
                 listener?.onFinish()
             }
             else                       -> {
-                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isCaffeineRunning) {
+                doIfAndroidO {
+                    if(isCaffeineRunning)
+                        return
+
                     notificationManager.createNotificationChannel(
                             NotificationChannel(NOTIFICATION_CHANNEL_ID,
                                     getString(R.string.notif_channel),
@@ -112,8 +114,9 @@ class TimerService : Service(), Loggable {
         currentTimer = null
         isCaffeineRunning = false
 
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        doIfAndroidO {
             stopForeground(true)
+        }
     }
 
     private fun registerInterruptionListeners() {

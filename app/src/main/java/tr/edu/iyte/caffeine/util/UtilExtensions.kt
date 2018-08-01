@@ -4,6 +4,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.PowerManager
 import android.telephony.TelephonyManager
 
@@ -33,3 +34,8 @@ inline fun <reified T: Service> Context.startService() =
 
 inline fun <reified T: Service> Context.stopService() =
         stopService(intent<T>())
+
+inline fun doIfAndroidO(task: () -> Unit) {
+    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        task()
+}
