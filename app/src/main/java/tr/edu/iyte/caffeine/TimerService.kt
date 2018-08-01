@@ -77,13 +77,13 @@ class TimerService : Service(), Loggable {
             else                       -> {
                 if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isCaffeineRunning) {
                     notificationManager.createNotificationChannel(
-                            NotificationChannel("caffeine_channel",
-                                    "Caffeine Notification Channel",
+                            NotificationChannel(NOTIFICATION_CHANNEL_ID,
+                                    getString(R.string.notif_channel),
                                     NotificationManager.IMPORTANCE_HIGH))
-                    val notif = NotificationCompat.Builder(this, "caffeine_channel")
+                    val notif = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                             .setOnlyAlertOnce(true)
                             .setSmallIcon(R.drawable.ic_caffeine_full)
-                            .setContentText("Caffeine is running")
+                            .setContentText(getString(R.string.notif_running))
                             .setOngoing(true)
                             .setCategory(Notification.CATEGORY_SERVICE)
                             .build()
@@ -137,7 +137,7 @@ class TimerService : Service(), Loggable {
         releaseWakelock()
 
         info("Acquiring wakelock..")
-        wakelock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "CaffeineWL")
+        wakelock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, WAKE_LOCK_TAG)
         wakelock?.acquire(secs.toMillis())
     }
 
