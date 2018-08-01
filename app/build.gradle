@@ -9,8 +9,8 @@ android {
         applicationId "tr.edu.iyte.caffeine"
         minSdkVersion 24
         targetSdkVersion 28
-        versionCode 11
-        versionName "2.0.7"
+        versionCode 12
+        versionName "2.0.8-alpha"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
