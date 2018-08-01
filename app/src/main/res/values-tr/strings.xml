@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tile_name">Caffeine</string>
+    <string name="notif_channel">Caffeine Bildirim Kanalı</string>
+    <string name="notif_running">Caffeine çalışıyor</string>
+</resources>

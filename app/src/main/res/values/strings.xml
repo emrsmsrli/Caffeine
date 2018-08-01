@@ -1,5 +1,5 @@
 <resources>
-    <string name="tile_name">Caffeine</string>
+    <string name="tile_name" translatable="false">Caffeine</string>
     <string name="notif_channel">Caffeine Notification Channel</string>
     <string name="notif_running">Caffeine is running</string>
 </resources>
