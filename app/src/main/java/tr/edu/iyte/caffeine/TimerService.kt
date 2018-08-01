@@ -83,7 +83,7 @@ class TimerService : Service(), Loggable {
                     val notif = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                             .setOnlyAlertOnce(true)
                             .setSmallIcon(R.drawable.ic_caffeine_full)
-                            .setContentText(getString(R.string.notif_running))
+                            .setContentTitle(getString(R.string.notif_running))
                             .setOngoing(true)
                             .setCategory(Notification.CATEGORY_SERVICE)
                             .build()
