@@ -97,10 +97,11 @@ class CaffeineTileService : TileService(), Loggable, TimerService.TimerListener 
             state: Int = Tile.STATE_INACTIVE,
             label: String = getString(R.string.tile_name),
             icon: Icon = icCaffeineEmpty) {
-        qsTile?.state = state
-        qsTile?.label = label
-        qsTile?.icon = icon
+        qsTile ?: return
+        qsTile.state = state
+        qsTile.label = label
+        qsTile.icon = icon
         info("updating label: $label")
-        qsTile?.updateTile()
+        qsTile.updateTile()
     }
 }
