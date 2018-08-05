@@ -14,4 +14,4 @@ Caffeine keeps you awake for
 Suggestions and critics are welcome!
 
 ### Known issues
-- None
+- App crashes on some devices while switching from infinite mode to inactive.
