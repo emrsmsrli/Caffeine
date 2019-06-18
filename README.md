@@ -1,4 +1,6 @@
-# Caffeine
+# End of Life
+
+## Caffeine
 
 Caffeine is for keeping your screen on for a defined time value.
 
@@ -10,8 +12,6 @@ Caffeine keeps you awake for
 * 30 mins
 * 1 hour
 * and for infinite!
-
-Suggestions and critics are welcome!
 
 ### Known issues
 - App crashes on some devices while switching from infinite mode to inactive.
